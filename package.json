@@ -15,10 +15,7 @@
 		"lint": "prettier --check . && eslint .",
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run && npm run test:e2e",
-		"test:e2e": "playwright test",
-		"electron": "electron src/electron.cjs",
-		"electron:dev": "vite build && electron src/electron.cjs",
-		"appd": "concurrently -n 'client,electron' -c 'blue,green' -k 'npm run dev' 'npm run electron'"
+		"test:e2e": "playwright test"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",
@@ -39,10 +36,6 @@
 		"@testing-library/svelte": "^5.2.4",
 		"concurrently": "^9.1.2",
 		"cross-env": "^7.0.3",
-		"electron": "^36.3.1",
-		"electron-reloader": "^1.2.3",
-		"electron-serve": "^2.1.1",
-		"electron-window-state": "^5.0.3",
 		"eslint": "^9.18.0",
 		"eslint-config-prettier": "^10.0.1",
 		"eslint-plugin-svelte": "^3.0.0",
