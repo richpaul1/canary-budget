@@ -1,9 +1,9 @@
 
-## Canary Budget allows you to easily upload new budgets to Harness. You would have to modify the code based on your custom format.
-
+## Canary Budget 
 
 ![Screenshot of Canary Budget](screenshot.png)
 
+Sample app for uploading budgets from CSV files.
 
 ## Environment variables:
 Make sure there is a .env file in the root folder with the following keys and values
