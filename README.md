@@ -1,7 +1,9 @@
 
 ## Environment variables:
 Make sure there is a .env file in the root folder with the following keys and values
+
 HARNESS_API_KEY=XXXX
+
 HARNESS_ACCOUNT_IDENTIFIER=XXXX
 
 ## Developing
