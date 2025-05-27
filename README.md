@@ -12,6 +12,9 @@ HARNESS_API_KEY=XXXX
 
 HARNESS_ACCOUNT_IDENTIFIER=XXXX
 
+## Installing
+Install by running `npm install`
+
 ## Developing
 
 Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
