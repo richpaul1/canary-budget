@@ -1,2 +1,13 @@
-Category,Item,Amount,Month,Notes
-Cloud Services,AWS EC2,1200,2024-06,Production servers
+Budget,Year,Month,Amount
+Test1,2025,May,100
+Test1,2025,June,200
+Test1,2025,July,300
+Test1,2025,August,400
+Test1,2025,September,500
+Test1,2025,October,600
+Test1,2025,November,700
+Test1,2025,December,800
+Test1,2026,January,900
+Test1,2026,February,1000
+Test1,2026,March,1100
+Test1,2026,April,1200

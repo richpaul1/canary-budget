@@ -7,6 +7,14 @@ const apiKey = process.env.HARNESS_API_KEY;
 const accountIdentifier = process.env.HARNESS_ACCOUNT_IDENTIFIER;
 const apiUrl = 'https://app.harness.io/ccm/api'; // Adjust region if necessary
 
+
+function createEntry(rec) {
+  const [perspective, year, month, amount] = rec;
+  const date = new Date(`${month} 1, ${year}`);
+  const timestamp = date.getTime();
+  return { time: timestamp, value: parseFloat(amount) * 10 }; // Assuming amount needs to be multiplied by 10
+}
+
 // New POST handler
 export const POST = async ({ request }) => {
   if (!apiKey || !accountIdentifier) {
@@ -21,28 +29,40 @@ export const POST = async ({ request }) => {
   }
 
   const existingBudget = body.oldbudget;
-  existingBudget.budgetAmount = parseFloat(parseFloat(body.budget.Amount).toFixed(2));
+  let newMonthlyAmounts = body.monthlyAmounts ;
 
-  //create exact object
-  const payload = {
+  //console.log("Monthly amounts \n"+JSON.stringify(newMonthlyAmounts))
+
+  let total = 0;
+  let monthlyRecords = []
+  newMonthlyAmounts.forEach((line) => {
+    total += line.value
+    monthlyRecords.push(line)
+  })
+
+ const payload = {
     accountId : accountIdentifier,
     name: existingBudget.name,
     type: existingBudget.type,
     period: existingBudget.period,
-    budgetAmount: existingBudget.budgetAmount,
+    budgetAmount: total,
     scope: {
       viewName: existingBudget.scope.viewName,
       type: existingBudget.scope.type,
       viewId: existingBudget.scope.viewId
-    }
+    },
+    budgetMonthlyBreakdown: {
+      budgetBreakdown : "MONTHLY",
+      budgetMonthlyAmount : monthlyRecords
+    },
   }
 
-//  return json({ success: true , message: 'Budget uploaded successfully' }, { status: 200 });
 
   let id = existingBudget.uuid;
   let postUrl = `${apiUrl}/budgets/${id}?accountIdentifier=${accountIdentifier}`;
   console.log("POST budgets ...", postUrl)
   console.log("POST budgets ...", JSON.stringify(payload,null,2))
+  
   try {
     // You can adjust the endpoint and payload as needed
     const response = await fetch(postUrl, {

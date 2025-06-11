@@ -20,8 +20,11 @@
 	<div id="navbar">
 		  <div class="card preset-filled-surface-100-900 grid grid-cols-3 gap-5 p-5">
 			<!-- By default tiles are <button> elements -->
-			<Navigation.Tile label="Budget" href="/budget">
+			<Navigation.Tile label="Budget Lookup" href="/lookup">
 			  <IconSettings />
+			</Navigation.Tile>
+			<Navigation.Tile label="Upload Budget" href="/upload">
+				<IconSettings />
 			</Navigation.Tile>
 		  </div>
 	</div>

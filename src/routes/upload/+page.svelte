@@ -12,10 +12,13 @@
 	// data = budgets;
 
 	const extract = (item) => item.name;
-	let e = $state(null);
 	let selected = $state(null);
 	let record = $state({});
 	let newBudget = $state([]);
+	let newBudgetTotal = $state(0);
+	let error = $state(null);
+	let csvData = $state(null);
+	let fileName = $state(null);
 
 	// Helper to reload props (and budgets) after upload
 	async function reloadProps() {
@@ -30,7 +33,6 @@
 			budgets = resp.data;
 			data = budgets;
 			budgets.forEach((budget) => {
-				console.log('Budget:', budget.name + ' ' + budget.budgetAmount);
 				if (budget.uuid === selected.uuid) {
 					const currentBudgetDiv = document.getElementById('current_budget');
 					currentBudgetDiv.classList.add('animate-match');
@@ -101,52 +103,17 @@
 			const timestamp = Date.UTC(year, monthNumber, 1); // GMT timestamp
 
 			// Push the formatted object to the result array
-			result.push({
+			let rec = {
 				time: timestamp,
 				value: parseFloat(item.Amount) // Convert the amount back to a number
-			});
+			}
+			result.push(rec);
 		});
 
 		// Return the processed array
 		return result;
 	}
 	
-
-
-
-	// Handle select event to store full budget object
-	function handleSelect(event) {
-		reset();
-
-		if(event.detail){
-			e = event.detail.original;
-			
-			budgets.forEach((budget) => {
-				if (budget.uuid === e.uuid) {
-					selected = budget;
-					selected.displayMonths = processBudgetDataToGMT(selected.budgetMonthlyBreakdown.budgetMonthlyAmount)
-				}
-			});
-		}
-		if(event.name){
-			budgets.forEach((budget) => {
-				if (budget.name === event.name) {
-					selected = budget;
-					selected.displayMonths = processBudgetDataToGMT(selected.budgetMonthlyBreakdown.budgetMonthlyAmount)
-				}
-			});
-		}
-
-		console.log('selected record :\n ' + JSON.stringify(selected, null, 2));
-	}
-
-	
-
-	let results = null;
-	let error = $state(null);
-	let csvData = $state(null);
-	let fileName = $state(null);
-
 	function handleError(err) {
 		if (err.body) {
 			error = err.body.error;
@@ -159,32 +126,84 @@
 		toast.show(error, 'error');
 	}
 
+	function handleErrorMessage(message){
+		error = message;
+		toast.show(error, 'error');
+	}
+
+
+	function validateNewBudget(budget){
+		let validate = {};
+		validate.result = true
+
+		//we should have 12 months
+		if(budget.length != 12){
+			validate.error = "Must upload all 12 Months, only "+budget.length+" found in file.";
+			validate.result = false;
+		}else{
+			for (const item of budget) {
+				const { Month, Amount } = item;
+
+				// Validate that the amount is greater than 0
+				if (parseFloat(Amount) <= 0) {
+					validate.error = `Invalid amount for ${Month}: ${Amount} ~ Amount must be greater than 0`;
+					validate.result = false;
+					break;
+				}
+
+				if (!(Month in monthMap)) {
+					validate.error = `Invalid month: \'${Month}\' `;
+					validate.result = false;
+					break;
+				}
+				newBudgetTotal += parseFloat(Amount);
+			}
+		}
+		return validate
+	}
+
+
 	async function handleFileUpload(event) {
 		try {
 			console.log('handleFileUpload ...');
 			error = null;
-			results = null;
 			newBudget = [];
-
+			let budgetName = null
 			const file = event.detail.file;
 			if (file) {
 				const reader = new FileReader();
 				fileName = file.name;
-				let budgetName = null
+				
 				reader.onload = (event) => {
-					// You can process the file content here
-					console.log('File contents:', event.target.result);
 					const result = Papa.parse(event.target.result, { header: true });
 					newBudget = result.data;
 					if(!budgetName){
 						budgetName = newBudget[0].Budget; // use first row's budget name
 					}
-					console.log('Parsed CSV data:');
-					console.log(JSON.stringify(newBudget)); // This is your JSON array
+					if (budgetName){
+						budgets.forEach((budget) => {
+							if (budget.name === budgetName) {
+
+								//validate file
+								let valid = validateNewBudget(newBudget)
+								if(valid.result){
+									selected = budget;
+									console.log('Selected Budget: \n' + JSON.stringify(selected,null,2));
+									selected.displayMonths = processBudgetDataToGMT(selected.budgetMonthlyBreakdown.budgetMonthlyAmount)
+								}else{
+									handleErrorMessage('validation error :\n'+valid.error);
+								}
+							}
+						});
+						if(selected){
+							toast.show('CSV file successfully processed', 'success');
+						}
+					}else{
+						handleErrorMessage('Budget '+budgetName+' Not Found!');
+					}
 				};
 				reader.readAsText(file);
 			}
-			toast.show('CSV file successfully processed', 'success');
 		} catch (err) {
 			handleError(err);
 		} finally {
@@ -202,19 +221,17 @@
 		csvData = null;
 		fileName = null;
 		error = null;
-		//isProcessing = false;
-		results = null;
 	}
 
 	function upload() {
-		console.log('uploading new budget ...');
-		toast.show('Uploading budget', 'info');
+		
+		toast.show('Uploading budget ...', 'info');
 		let monthlyAmounts = reverseProcessBudgetDataToGMT(newBudget);
 		const payload = {
 			monthlyAmounts: monthlyAmounts,
 			oldbudget: selected
 		};
-		console.log('payload : ' + JSON.stringify(payload));
+		
 		fetch('/api/v1/budgets', {
 			method: 'POST',
 			headers: {
@@ -226,25 +243,15 @@
 				const body = await response.json();
 				if (!response.ok) {
 					// Attach response to error for later access
-					const error = new Error(body?.message || 'Upload failed');
-					error.response = response;
-					error.body = body;
-					throw error;
+					throw new Error(body?.message || 'Upload failed');
 				}
 				return body;
 			})
 			.then(async (data) => {
-				console.log('Success:', data);
-
 				await reloadProps();
 			})
 			.catch((error) => {
-				// You can now access error.response and error.body here
-				handleError({
-					message: error.message,
-					response: error.response,
-					body: error.body
-				});
+				handleErrorMessage(error.message)
 			});
 	}
 
@@ -271,20 +278,31 @@
 
 <Toasts />
 <div class="space-y-4">
-	<div class="card variant-filled border-0 p-4">
-		<Typeahead
-			class="border-none bg-transparent text-gray-100 focus:ring-0"
-			label="Select Budget"
-			showAllResultsOnFocus
-			{data}
-			{extract}
-			on:select={handleSelect}
-			on:clear={reset}
-			bind:value={selected} 
-		/>
-	</div>
-
+	<div
+	class="card from-primary-900/50 to-primary-800/30 border-primary-700/50 my-4 bg-gradient-to-br"
+>
+	<FileUploader on:file={handleFileUpload} />
+</div>
+	{#if error}
+		<div class="card variant-filled {dottedBorderColor} p-4 md:col-span-3">
+			<section class="p-4 text-center">
+				<div class={`text-2xl font-bold ${valueTextColor}`}>
+					<span>
+						<p class="text-red-500">{error}!</p>
+					</span>
+				</div>
+			</section>
+		</div>
+	{/if}
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+		
+		<div class="card variant-filled flex-grow {dottedBorderColor} p-4 md:col-span-3">
+			<section class="flex flex-row items-start justify-between gap-x-8 p-4">
+				Budget : {selected?.name || ''}
+			</section>
+		</div>
+
+
 		<div class="card variant-filled flex-grow {dottedBorderColor} p-4 md:col-span-3">
 			<section class="flex flex-row items-start justify-between gap-x-8 p-4">
 				<p class="flex flex-1 flex-col">
@@ -296,7 +314,7 @@
 					<span class={`text-base ${valueTextColor}`}>{selected?.type || ''}</span>
 				</p>
 				<p class="flex flex-1 flex-col">
-					<span class={`text-xs ${labelTextColor}`}>Budget:</span>
+					<span class={`text-xs ${labelTextColor}`}>Perspective:</span>
 					<span class={`text-base ${valueTextColor}`}>{selected?.scope.viewName || ''}</span>
 				</p>
 			</section>
@@ -336,32 +354,11 @@
     </pre>
 	{/if}
 </div>
-<div
-	class="card from-primary-900/50 to-primary-800/30 border-primary-700/50 my-4 bg-gradient-to-br"
->
-	<FileUploader on:file={handleFileUpload} />
-</div>
 
 <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-	{#if error}
-		<div class="card variant-filled {dottedBorderColor} p-4 md:col-span-3">
-			<section class="p-4 text-center">
-				<div class={`text-2xl font-bold ${valueTextColor}`}>
-					<span>
-						<p class="text-red-500">{error}!</p>
-					</span>
-				</div>
-			</section>
-		</div>
-	{/if}
 	{#if newBudget.length > 0 && selected }
 		<div class="card variant-filled {dottedBorderColor} p-4 md:col-span-3">
 			<section class="p-4 text-center">
-				<div class={`text-2xl font-bold ${valueTextColor}`}>
-					<span>
-						{newBudget ? `${fileName} - successfully processed!` : 'No CSV file uploaded'}
-					</span>
-				</div>
 				{#if error}
 					<p class={`text-xs ${labelTextColor}`}>{error}</p>
 				{:else}
@@ -370,7 +367,7 @@
 					onclick={upload}
 					type="button"
 				>
-					Upload New Budget
+					Upload Budget Updates
 				</button>
 				{/if}
 			</section>
@@ -414,6 +411,14 @@
 								<td class="border border-gray-300 px-4 py-2 text-gray-300">{row.Amount}</td> <!-- Dimmed row text -->
 							</tr>
 						{/each}
+						<tr class="font-bold">
+							<td class="border border-gray-300 px-4 py-2 text-gray-300"></td>
+							<td class="border border-gray-300 px-4 py-2 text-gray-300"></td>
+							<td class="border border-gray-300 px-4 py-2 text-gray-300">Total</td>
+							<td class="border px-4 py-2 text-gray-300">
+								${newBudgetTotal|| '0'}
+							</td>
+						</tr>
 					</tbody>
 				</table>
 			</section>

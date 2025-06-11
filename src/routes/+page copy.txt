@@ -8,14 +8,14 @@
 	let showDebug = false;
 	let props = $props();
 	let budgets = $state([]);
-	let data = $state(budgets);
-	// data = budgets;
+	let data = $state([]);
+	data = budgets;
 
 	const extract = (item) => item.name;
 	let e = $state(null);
 	let selected = $state(null);
 	let record = $state({});
-	let newBudget = $state([]);
+	let newBudget = $state({});
 
 	// Helper to reload props (and budgets) after upload
 	async function reloadProps() {
@@ -46,101 +46,19 @@
 		}
 	}
 
-	function processBudgetDataToGMT(data) {
-		// Array to store the processed results
-		const result = [];
-
-		// Iterate through the budgetMonthlyAmount array
-		data.forEach(item => {
-			// Convert timestamp to a Date object in GMT
-			const date = new Date(item.time);
-
-			// Extract the month name using Intl.DateTimeFormat in GMT
-			const month = new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'GMT' }).format(date);
-
-			// Push the formatted object to the result array
-			result.push({
-				Month: month,
-				Amount: item.value.toFixed(2) // Format the amount to 2 decimal places
-			});
-		});
-
-		// Return the processed array
-		return result;
-	}
-
-	const monthMap = {
-		January: 0,
-		February: 1,
-		March: 2,
-		April: 3,
-		May: 4,
-		June: 5,
-		July: 6,
-		August: 7,
-		September: 8,
-		October: 9,
-		November: 10,
-		December: 11
-	};
-
-
-	function reverseProcessBudgetDataToGMT(data) {
-		// Array to store the processed results
-		const result = [];
-		
-		// Iterate through the input array
-		data.forEach(item => {
-			// Current year for timestamp calculation (adjust as needed)
-			const year = item.Year; // Example year for conversion
-			
-			// Get the month number from the monthMap
-			const monthNumber = monthMap[item.Month];
-
-			// Create a timestamp in GMT for the first day of the month
-			const timestamp = Date.UTC(year, monthNumber, 1); // GMT timestamp
-
-			// Push the formatted object to the result array
-			result.push({
-				time: timestamp,
-				value: parseFloat(item.Amount) // Convert the amount back to a number
-			});
-		});
-
-		// Return the processed array
-		return result;
-	}
-	
-
-
-
 	// Handle select event to store full budget object
 	function handleSelect(event) {
 		reset();
 
-		if(event.detail){
-			e = event.detail.original;
-			
-			budgets.forEach((budget) => {
-				if (budget.uuid === e.uuid) {
-					selected = budget;
-					selected.displayMonths = processBudgetDataToGMT(selected.budgetMonthlyBreakdown.budgetMonthlyAmount)
-				}
-			});
-		}
-		if(event.name){
-			budgets.forEach((budget) => {
-				if (budget.name === event.name) {
-					selected = budget;
-					selected.displayMonths = processBudgetDataToGMT(selected.budgetMonthlyBreakdown.budgetMonthlyAmount)
-				}
-			});
-		}
+		e = event.detail.original;
+		budgets.forEach((budget) => {
+			if (budget.uuid === e.uuid) {
+				selected = budget;
+			}
+		});
 
 		console.log('selected record :\n ' + JSON.stringify(selected, null, 2));
 	}
-
-	
 
 	let results = null;
 	let error = $state(null);
@@ -164,21 +82,18 @@
 			console.log('handleFileUpload ...');
 			error = null;
 			results = null;
-			newBudget = [];
+			newBudget = {};
 
 			const file = event.detail.file;
 			if (file) {
 				const reader = new FileReader();
 				fileName = file.name;
-				let budgetName = null
+
 				reader.onload = (event) => {
 					// You can process the file content here
 					console.log('File contents:', event.target.result);
 					const result = Papa.parse(event.target.result, { header: true });
 					newBudget = result.data;
-					if(!budgetName){
-						budgetName = newBudget[0].Budget; // use first row's budget name
-					}
 					console.log('Parsed CSV data:');
 					console.log(JSON.stringify(newBudget)); // This is your JSON array
 				};
@@ -209,9 +124,8 @@
 	function upload() {
 		console.log('uploading new budget ...');
 		toast.show('Uploading budget', 'info');
-		let monthlyAmounts = reverseProcessBudgetDataToGMT(newBudget);
 		const payload = {
-			monthlyAmounts: monthlyAmounts,
+			budget: newBudget,
 			oldbudget: selected
 		};
 		console.log('payload : ' + JSON.stringify(payload));
@@ -265,9 +179,51 @@
 		}
 	});
 
-	let headers = ['Budget', 'Year', 'Month', 'Amount'];
+	let csvData2 = [];
+	let headers = ['Perspective', 'Year', 'Month', 'Amount'];
 
+	function handleFileUploadNew(event) {
+		const file = event.target.files[0];
+		const reader = new FileReader();
+		reader.onload = (e) => {
+			const text = e.target.result;
+			parseCSV(text);
+		};
+		reader.readAsText(file);
+	}
+
+	function parseCSV(data) {
+		const rows = data.split('\n').map(row => row.split(','));
+		csvData = rows.slice(1).map(row => ({
+			perspective: row[0],
+			year: row[1],
+			month: row[2],
+			amount: row[3]
+		}));
+	}
 </script>
+
+<input type="file" accept=".csv" onchange={handleFileUploadNew}/>
+
+<table class="min-w-full">
+	<thead>
+		<tr>
+			{#each headers as header}
+				<th class="px-4 py-2">{header}</th>
+			{/each}
+		</tr>
+	</thead>
+	<tbody>
+		{#each csvData2 as row}
+			<tr>
+				<td class="border px-4 py-2">{row.perspective}</td>
+				<td class="border px-4 py-2">{row.year}</td>
+				<td class="border px-4 py-2">{row.month}</td>
+				<td class="border px-4 py-2">{row.amount}</td>
+			</tr>
+		{/each}
+	</tbody>
+</table>
 
 <Toasts />
 <div class="space-y-4">
@@ -280,7 +236,6 @@
 			{extract}
 			on:select={handleSelect}
 			on:clear={reset}
-			bind:value={selected} 
 		/>
 	</div>
 
@@ -296,7 +251,7 @@
 					<span class={`text-base ${valueTextColor}`}>{selected?.type || ''}</span>
 				</p>
 				<p class="flex flex-1 flex-col">
-					<span class={`text-xs ${labelTextColor}`}>Budget:</span>
+					<span class={`text-xs ${labelTextColor}`}>Perspective:</span>
 					<span class={`text-base ${valueTextColor}`}>{selected?.scope.viewName || ''}</span>
 				</p>
 			</section>
@@ -354,7 +309,7 @@
 			</section>
 		</div>
 	{/if}
-	{#if newBudget.length > 0 && selected }
+	{#if newBudget.Amount}
 		<div class="card variant-filled {dottedBorderColor} p-4 md:col-span-3">
 			<section class="p-4 text-center">
 				<div class={`text-2xl font-bold ${valueTextColor}`}>
@@ -364,7 +319,19 @@
 				</div>
 				{#if error}
 					<p class={`text-xs ${labelTextColor}`}>{error}</p>
-				{:else}
+				{/if}
+			</section>
+		</div>
+		<div id="new_budget" class="card variant-filled {dottedBorderColor} p-4 md:col-span-1">
+			<section class="p-4 text-center">
+				<div class={`text-4xl font-bold ${valueTextColor}`}>
+					${newBudget?.Amount?.toLocaleString() || '0'}
+				</div>
+				<span class={`text-xs ${labelTextColor}`}>New Budget</span>
+			</section>
+		</div>
+		<div class="card variant-filled p-4 md:col-span-1">
+			<section class="p-4 text-center">
 				<button
 					class="rounded bg-blue-600 px-4 py-2 font-bold text-white transition-colors duration-150 hover:bg-blue-700"
 					onclick={upload}
@@ -372,50 +339,6 @@
 				>
 					Upload New Budget
 				</button>
-				{/if}
-			</section>
-		</div>
-		<div id="new_budget" class="card variant-filled {dottedBorderColor} p-4 md:col-span-1">
-			<section class="p-4 text-center">
-				<table class="min-w-full">
-					<thead>
-						<tr>
-							<th class="px-4 py-2 text-gray-500">Month</th>
-							<th class="px-4 py-2 text-gray-500">Amount</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each selected.displayMonths as row}
-							<tr>
-								<td class="border px-4 py-2 text-gray-500">{row.Month}</td>
-								<td class="border px-4 py-2 text-gray-500">{row.Amount}</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</section>
-		</div>
-		<div id="new_budget" class="card variant-filled {dottedBorderColor} p-4 md:col-span-2">
-			<section class="p-4 text-center">
-				<table class="min-w-full">
-					<thead>
-						<tr>
-							{#each headers as header}
-								<th class="px-4 py-2 text-gray-200">{header}</th> <!-- Dimmed header text -->
-							{/each}
-						</tr>
-					</thead>
-					<tbody>
-						{#each newBudget as row}
-							<tr>
-								<td class="border border-gray-300 px-4 py-2 text-gray-300">{row.Budget}</td> <!-- Dimmed row text -->
-								<td class="border border-gray-300 px-4 py-2 text-gray-300">{row.Year}</td> <!-- Dimmed row text -->
-								<td class="border border-gray-300 px-4 py-2 text-gray-300">{row.Month}</td> <!-- Dimmed row text -->
-								<td class="border border-gray-300 px-4 py-2 text-gray-300">{row.Amount}</td> <!-- Dimmed row text -->
-							</tr>
-						{/each}
-					</tbody>
-				</table>
 			</section>
 		</div>
 	{/if}
