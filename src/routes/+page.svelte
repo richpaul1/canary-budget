@@ -144,6 +144,8 @@
 
 	let results = null;
 	let error = $state(null);
+			// Redirect to the upload route
+			window.location.href = '/upload/';
 	let csvData = $state(null);
 	let fileName = $state(null);
 

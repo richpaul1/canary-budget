@@ -111,13 +111,10 @@ export const GET = async (params) => {
       return json({ error: `Failed to fetch budgets: ${response.statusText}` }, { status: response.status });
     }
 
+    let start = new Date().getMilliseconds();
     const budgets = await response.json();
-    //console.log("Budgets loaded ...", JSON.stringify(budgets, null, 2));
-    if (budgets && budgets.data && Array.isArray(budgets.data)) {
-      budgets.data.forEach(budget => {
-        console.log(`Name: ${budget.name}, Amount: ${budget.budgetAmount}`);
-      });
-    }
+    let end = new Date().getMilliseconds();
+    console.log("Budgets loaded in " + (end - start) + " ms");
     return json(budgets)
   } catch (error) {
     console.error('An unexpected error occurred:', error);
