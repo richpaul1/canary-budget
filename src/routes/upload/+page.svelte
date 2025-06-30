@@ -177,24 +177,35 @@
 				reader.onload = (event) => {
 					const result = Papa.parse(event.target.result, { header: true });
 					newBudget = result.data;
-					if(!budgetName){
-						budgetName = newBudget[0].Budget; // use first row's budget name
+					try {
+						if(!budgetName){
+							budgetName = newBudget[0].Budget; // use first row's budget name
+						}
+					} catch (e) {
+						handleErrorMessage('Could not extract budget name from CSV');
+						return;
 					}
 					if (budgetName){
+						let budgetExists = false
 						budgets.forEach((budget) => {
 							if (budget.name === budgetName) {
-
 								//validate file
 								let valid = validateNewBudget(newBudget)
 								if(valid.result){
 									selected = budget;
 									console.log('Selected Budget: \n' + JSON.stringify(selected,null,2));
 									selected.displayMonths = processBudgetDataToGMT(selected.budgetMonthlyBreakdown.budgetMonthlyAmount)
+
 								}else{
 									handleErrorMessage('validation error :\n'+valid.error);
 								}
+								budgetExists = true;
 							}
 						});
+						if(!budgetExists){
+							handleErrorMessage('Budget '+budgetName+' Not Found!');
+							return;
+						}
 						if(selected){
 							toast.show('CSV file successfully processed', 'success');
 						}
