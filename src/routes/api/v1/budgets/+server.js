@@ -1,10 +1,11 @@
 // In your src/routes/api/budgets/+server.js
 import { json } from '@sveltejs/kit';
-import 'dotenv/config'; // Load environment variables
 import fetch from 'node-fetch'; // Import node-fetch for server-side requests
+import fs from 'fs';
+import env from './env.json' assert { type: 'json' };
 
-const apiKey = process.env.HARNESS_API_KEY;
-const accountIdentifier = process.env.HARNESS_ACCOUNT_IDENTIFIER;
+const apiKey = env.HARNESS_API_KEY;
+const accountIdentifier = env.HARNESS_ACCOUNT_IDENTIFIER;
 const apiUrl = 'https://app.harness.io/ccm/api'; // Adjust region if necessary
 
 

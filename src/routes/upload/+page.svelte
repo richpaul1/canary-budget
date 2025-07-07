@@ -131,14 +131,27 @@
 		toast.show(error, 'error');
 	}
 
+	function stripEmptyRows(budget){
+		let cleanBudget = [];
+		//attempt to remove any rows
+		budget.forEach((item) => {
+			if (item.Month && item.Amount) {
+				cleanBudget.push(item);
+			}
+		});
+
+		return cleanBudget;
+	}
 
 	function validateNewBudget(budget){
 		let validate = {};
 		validate.result = true
+		
 
 		//we should have 12 months
 		if(budget.length != 12){
-			validate.error = "Must upload all 12 Months, only "+budget.length+" found in file.";
+			validate.error = "Must upload all 12 Months only, " + budget.length + " records found in file.\n";
+			//validate.error += "Here are the last 2 lines of the file:\n'" + JSON.stringify(budget.slice(-2), null, 2) + "'";v
 			validate.result = false;
 		}else{
 			for (const item of budget) {
@@ -177,6 +190,7 @@
 				reader.onload = (event) => {
 					const result = Papa.parse(event.target.result, { header: true });
 					newBudget = result.data;
+					newBudget = stripEmptyRows(newBudget); // Remove any empty rows
 					try {
 						if(!budgetName){
 							budgetName = newBudget[0].Budget; // use first row's budget name
