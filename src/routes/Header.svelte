@@ -26,6 +26,9 @@
 			<Navigation.Tile label="Upload Budget" href="/upload">
 				<IconSettings />
 			</Navigation.Tile>
+			<Navigation.Tile label="Bulk Upload Budget" href="/bulk">
+				<IconUpload />
+			</Navigation.Tile>
 		  </div>
 	</div>
 	<div id="right_corner">
