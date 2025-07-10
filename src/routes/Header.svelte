@@ -13,12 +13,11 @@
 
 	const mode = 'dark'; // Default mode, can be overridden by localStorage
 
-	</script>
-
+</script>
 
 <header>
 	<div id="navbar">
-		  <div class="card preset-filled-surface-100-900 grid grid-cols-3 gap-5 p-5">
+		  <div class="card grid grid-cols-3 gap-5 p-5">
 			<!-- By default tiles are <button> elements -->
 			<Navigation.Tile label="Budget Lookup" href="/lookup">
 			  <IconSettings />
@@ -42,7 +41,6 @@
 	header {
 		display: flex;
 		justify-content: space-between;
-		background-color: rgb(36, 34, 34);
 	}
 
 	#right_corner {
@@ -50,6 +48,7 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 0 15px; /* Optional: adds margin on sides */
+		
 	}
 
 	#logo {

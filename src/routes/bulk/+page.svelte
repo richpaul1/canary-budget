@@ -4,6 +4,8 @@
   import Toasts from '$components/Toasts.svelte';
   import Papa from 'papaparse';
   import { onMount } from 'svelte';
+  import IconUpload from '@lucide/svelte/icons/upload';
+  import Check from '@lucide/svelte/icons/check';
 
   let budgets = $state([]);
   let csvData = $state([]);
@@ -11,12 +13,20 @@
   let error = $state(null);
   let isUploading = $state(false);
   let uploadProgress = $state(0);
-  let uploadStatus = $state({}); // Tracks status per row (e.g., { 0: { status: 'success' }, 1: { status: 'error', message: '...' } })
+  let uploadStatus = $state({}); // Tracks status per row
 
   const monthOrder = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
+
+  const monthShortNames = [
+    'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+    'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'
+  ];
+
+  // Headers for the new CSV format
+  const amountHeaders = Array.from({ length: 12 }, (_, i) => `Month${i + 1}`);
 
   // Fetch existing budgets
   onMount(async () => {
@@ -36,25 +46,38 @@
       return { valid: false, error: 'CSV is empty' };
     }
 
-    const expectedHeaders = ['Budget', 'Year', ...monthOrder];
+    const expectedHeaders = ['Budget', 'Year', 'Month', ...amountHeaders];
     const headers = Object.keys(data[0]);
     if (!expectedHeaders.every(h => headers.includes(h))) {
       return { valid: false, error: `Invalid headers. Expected: ${expectedHeaders.join(', ')}` };
     }
 
+    const seenBudgets = new Set();
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
       if (!row.Budget) {
-        return { valid: false, error: `Row ${i + 1}: Missing Budget name` };
+        return { valid: false, error: `Row ${i + 2}: Missing Budget name` };
+      }
+      const budget = budgets.find(b => b.name === row.Budget);
+      if (!budget) {
+        return { valid: false, error: `Row ${i + 2}: Budget "${row.Budget}" not found` };
       }
       const year = parseInt(row.Year);
       if (isNaN(year) || year < 2000 || year > 2100) {
-        return { valid: false, error: `Row ${i + 1}: Invalid Year (${row.Year})` };
+        return { valid: false, error: `Row ${i + 2}: Invalid Year (${row.Year})` };
       }
-      for (const month of monthOrder) {
-        const amount = parseFloat(row[month]);
+      if (!monthOrder.includes(row.Month)) {
+        return { valid: false, error: `Row ${i + 2}: Invalid Month (${row.Month})` };
+      }
+      const budgetYearKey = `${row.Budget}-${row.Year}-${row.Month}`;
+      if (seenBudgets.has(budgetYearKey)) {
+        return { valid: false, error: `Row ${i + 2}: Duplicate Budget-Year-Month combination (${row.Budget}, ${row.Year}, ${row.Month})` };
+      }
+      seenBudgets.add(budgetYearKey);
+      for (const monthKey of amountHeaders) {
+        const amount = parseFloat(row[monthKey]?.toString().replace(/,/g, ''));
         if (isNaN(amount) || amount <= 0) {
-          return { valid: false, error: `Row ${i + 1}: Invalid amount for ${month} (${row[month]})` };
+          return { valid: false, error: `Row ${i + 2}: Invalid amount for ${monthKey} (${row[monthKey]})` };
         }
       }
     }
@@ -64,15 +87,30 @@
 
   // Transform CSV row to API payload
   function rowToPayload(row, budget) {
-    const year = parseInt(row.Year);
-    const monthlyAmounts = monthOrder.map((month, index) => ({
-      time: Date.UTC(year, index, 1),
-      value: parseFloat(row[month])
-    }));
+    const startYear = parseInt(row.Year);
+    const startMonthIndex = monthOrder.indexOf(row.Month);
+    const monthlyAmounts = amountHeaders.map((monthKey, index) => {
+      const monthIndex = (startMonthIndex + index) % 12;
+      const yearOffset = Math.floor((startMonthIndex + index) / 12);
+      return {
+        time: Date.UTC(startYear + yearOffset, monthIndex, 1),
+        value: parseFloat(row[monthKey].toString().replace(/,/g, ''))
+      };
+    });
     return {
       monthlyAmounts,
       oldbudget: budget
     };
+  }
+
+  // Get short month names for a row
+  function getShortMonthNames(row) {
+    const startYear = parseInt(row.Year);
+    const startMonthIndex = monthOrder.indexOf(row.Month);
+    return amountHeaders.map((_, index) => {
+      const monthIndex = (startMonthIndex + index) % 12;
+      return monthShortNames[monthIndex];
+    });
   }
 
   // Handle file upload
@@ -91,14 +129,14 @@
       const reader = new FileReader();
       reader.onload = (event) => {
         const result = Papa.parse(event.target.result, { header: true });
-        const data = result.data.filter(row => row.Budget && row.Year); // Remove empty rows
+        const data = result.data.filter(row => row.Budget && row.Year && row.Month);
         const validation = validateCsv(data);
         if (!validation.valid) {
           handleError(validation.error);
           return;
         }
 
-        // Check if budgets exist
+        // Check budget existence
         data.forEach((row, index) => {
           const budget = budgets.find(b => b.name === row.Budget);
           if (!budget) {
@@ -146,7 +184,7 @@
     for (let i = 0; i < csvData.length; i++) {
       if (uploadStatus[i].status === 'error') {
         uploadProgress = ((i + 1) / csvData.length) * 100;
-        continue; // Skip rows with errors
+        continue;
       }
       const row = csvData[i];
       const budget = budgets.find(b => b.name === row.Budget);
@@ -178,7 +216,25 @@
 
   // Calculate total for a row
   function calculateRowTotal(row) {
-    return monthOrder.reduce((sum, month) => sum + parseFloat(row[month] || 0), 0);
+    return amountHeaders.reduce((sum, monthKey) => sum + parseFloat(row[monthKey]?.toString().replace(/,/g, '') || 0), 0);
+  }
+
+  // Download CSV template
+  function downloadCsvTemplate() {
+    const headers = ['Budget', 'Year', 'Month', ...amountHeaders];
+    const sampleRow = {
+      Budget: 'Example Budget',
+      Year: '2025',
+      Month: 'January',
+      ...Object.fromEntries(amountHeaders.map(month => [month, '1000.00']))
+    };
+    const csv = Papa.unparse([sampleRow], { header: true });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'budget_template.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
   }
 </script>
 
@@ -189,6 +245,12 @@
     {#if fileName}
       <p class="text-xs text-gray-500 mt-2">Uploaded: {fileName}</p>
     {/if}
+    <button
+      class="mt-2 rounded bg-gray-600 px-4 py-2 font-bold text-white hover:bg-gray-700"
+      on:click={downloadCsvTemplate}
+    >
+      Download CSV Template
+    </button>
   </div>
 
   {#if error}
@@ -199,46 +261,6 @@
 
   {#if csvData.length > 0}
     <div class="card variant-filled border-2 border-dotted border-gray-700 p-4">
-      <section class="p-4">
-        <table class="min-w-full border-collapse">
-          <thead>
-            <tr>
-              <th class="px-4 py-2 text-gray-200">Status</th>
-              <th class="px-4 py-2 text-gray-200">Budget</th>
-              <th class="px-4 py-2 text-gray-200">Year</th>
-              {#each monthOrder as month}
-                <th class="px-4 py-2 text-gray-200">{month}</th>
-              {/each}
-              <th class="px-4 py-2 text-gray-200">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each csvData as row, index}
-              <tr>
-                <td class="border border-gray-300 px-4 py-2 text-gray-300 text-center">
-                  {#if uploadStatus[index].status === 'success'}
-                    <span class="text-green-500">✔</span>
-                  {:else if uploadStatus[index].status === 'error'}
-                    <span class="text-red-500">✖ {uploadStatus[index].message}</span>
-                  {:else}
-                    <span>⏳</span>
-                  {/if}
-                </td>
-                <td class="border border-gray-300 px-4 py-2 text-gray-300">{row.Budget}</td>
-                <td class="border border-gray-300 px-4 py-2 text-gray-300">{row.Year}</td>
-                {#each monthOrder as month}
-                  <td class="border border-gray-300 px-4 py-2 text-gray-300">
-                    ${parseFloat(row[month]).toLocaleString()}
-                  </td>
-                {/each}
-                <td class="border border-gray-300 px-4 py-2 text-gray-300 font-bold">
-                  ${calculateRowTotal(row).toLocaleString()}
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-      </section>
       {#if isUploading}
         <div class="mt-4">
           <div class="w-full bg-gray-700 rounded-full h-4">
@@ -258,6 +280,48 @@
           Upload All Budgets
         </button>
       {/if}
+      <section class="p-4">
+        <table class="min-w-full border-collapse" aria-label="CSV Budget Data">
+          <thead>
+            <tr>
+              <th scope="col" class="px-4 py-2 text-gray-200">Status</th>
+              <th scope="col" class="px-4 py-2 text-gray-200">Budget</th>
+              <th scope="col" class="px-4 py-2 text-gray-200">Year</th>
+              <th scope="col" class="px-4 py-2 text-gray-200">Start Month</th>
+              {#each amountHeaders as _, index}
+                <th scope="col" class="px-4 py-2 text-gray-200">Month {index + 1}</th>
+              {/each}
+              <th scope="col" class="px-4 py-2 text-gray-200">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each csvData as row, index}
+              <tr>
+                <td class="border border-gray-300 px-4 py-2 text-gray-300 text-center" aria-label={`Status for row ${index + 1}`}>
+                  {#if uploadStatus[index].status === 'success'}
+                    <span class="text-green-500"><Check class="inline w-10 h-10 text-green-400" aria-label="Success" /></span>
+                  {:else if uploadStatus[index].status === 'error'}
+                    <span class="text-red-500" aria-label="Error: {uploadStatus[index].message}">✖ {uploadStatus[index].message}</span>
+                  {:else}
+                    <IconUpload title="Pending upload" class="inline w-10 h-10 text-grey-400" aria-label="Pending" />
+                  {/if}
+                </td>
+                <td class="border border-gray-300 px-4 py-2 text-gray-300">{row.Budget}</td>
+                <td class="border border-gray-300 px-4 py-2 text-gray-300">{row.Year}</td>
+                <td class="border border-gray-300 px-4 py-2 text-gray-300">{row.Month}</td>
+                {#each amountHeaders as month, monthIndex}
+                  <td class="border border-gray-300 px-4 py-2 text-gray-300">
+                    {getShortMonthNames(row)[monthIndex]} - ${parseFloat(row[month].toString().replace(/,/g, '')).toLocaleString()}
+                  </td>
+                {/each}
+                <td class="border border-gray-300 px-4 py-2 text-gray-300 font-bold">
+                  ${calculateRowTotal(row).toLocaleString()}
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </section>
     </div>
   {/if}
 </div>
