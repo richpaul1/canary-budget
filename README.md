@@ -40,3 +40,4 @@ You can also copy the build directory with your .env file and run > node index.j
 
 If you want to deploy in a hosting framework
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+

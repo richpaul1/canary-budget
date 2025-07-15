@@ -10,14 +10,15 @@
 	import IconHouse from '@lucide/svelte/icons/house';
 	import IconUpload from '@lucide/svelte/icons/upload';
 	import IconSettings from '@lucide/svelte/icons/settings';
-
+	import BadgeInfo from '@lucide/svelte/icons/badge-info';
+	
 	const mode = 'dark'; // Default mode, can be overridden by localStorage
 
 </script>
 
 <header>
 	<div id="navbar">
-		  <div class="card grid grid-cols-3 gap-5 p-5">
+		  <div class="card grid grid-cols-4">
 			<!-- By default tiles are <button> elements -->
 			<Navigation.Tile label="Budget Lookup" href="/lookup">
 			  <IconSettings />
@@ -27,6 +28,9 @@
 			</Navigation.Tile>
 			<Navigation.Tile label="Bulk Upload Budget" href="/bulk">
 				<IconUpload />
+			</Navigation.Tile>
+			<Navigation.Tile label="Help" href="/help">
+				<BadgeInfo />
 			</Navigation.Tile>
 		  </div>
 	</div>
