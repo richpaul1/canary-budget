@@ -15,7 +15,8 @@
 		"lint": "prettier --check . && eslint .",
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run && npm run test:e2e",
-		"test:e2e": "playwright test"
+		"test:e2e": "playwright test",
+		"test-jest": "jest"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",
@@ -54,6 +55,7 @@
 	"dependencies": {
 		"@lucide/svelte": "^0.509.0",
 		"dotenv": "^16.5.0",
+		"jest": "^30.0.4",
 		"node-fetch": "^3.3.2",
 		"papaparse": "^5.5.3",
 		"svelte-loading-spinners": "^0.3.6",

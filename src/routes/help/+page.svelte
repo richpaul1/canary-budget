@@ -39,8 +39,66 @@ Test1,2025,March,100,200,300,400,500,600,700,800,900,1000,1100,1200
             <tr>
                 <td class="error">CSV is empty</td>
                 <td>
-                    Possible - Missing the header row: <br />
-                    <code class="inline-code">Budget,Year,Month,Month1,Month2,Month3,Month4,Month5,Month6,Month7,Month8,Month9,Month10,Month11,Month12</code>
+                    No rows found to process.
+                </td>
+            </tr>
+            <tr>
+                <td class="error">Row 2 : Missing Year</td>
+                <td>
+                    The Year is missing e.g. 
+                    <pre>
+                        
+Budget,Year,Month,Month1,Month2,Month3,Month4,Month5,Month6,Month7,Month8,Month9,Month10,Month11,Month12       
+Test1<span class="error">,,</span>January,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00
+        </pre>
+                </td>
+            </tr>
+            <tr>
+                <td class="error">Row 2: Invalid Year (20)</td>
+                <td>
+                    An invalid year - 20 was entered <br />
+                    <pre>
+                        
+Budget,Year,Month,Month1,Month2,Month3,Month4,Month5,Month6,Month7,Month8,Month9,Month10,Month11,Month12       
+Test1,<span class="error">20</span>,January,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00
+        </pre>
+                </td>
+            </tr>
+            <tr>
+                <td class="error">Invalid headers. Expected: Budget, Year, Month, Month1, Month2, Month3, Month4, Month5, Month6, Month7, Month8, Month9, Month10, Month11, Month12 </td>
+                <td>
+                    The file is missing the header row. It is required.
+                </td>
+            </tr>
+            <tr>
+                <td class="error">Row 2: Invalid Month (Jan)</td>
+                <td>
+                    The Month should start with upper case first letter and be the full name. Here is an example of an error
+                    <pre>
+                        
+Budget,Year,Month,Month1,Month2,Month3,Month4,Month5,Month6,Month7,Month8,Month9,Month10,Month11,Month12       
+Test1,2001,<span class="error">Jan</span>,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00,1000.00
+        </pre>
+                </td>
+            </tr>
+            <tr>
+                <td class="error">Row 3: Duplicate Budget-Year-Month combination (Test1, 2001, January)</td>
+                <td>
+                   It will look for duplicates e.g. Based on Budget, Year and Month.
+                    <pre>
+Budget,Year,Month,Month1,Month2,Month3,Month4,Month5,Month6,Month7,Month8,Month9,Month10,Month11,Month12
+<span class="error">Test1,2001,January</span>,100,200,300,400,500,600,700,800,900,1000,1100,1200
+<span class="error">Test1,2001,January</span>,100,200,300,400,500,600,700,800,900,1000,1100,1200
+        </pre>
+                </td>
+            </tr>
+            <tr>
+                <td class="error">Row 2: Invalid amount for Month1 ()</td>
+                <td>
+                   Amounts have to be valid e.g. of invalid
+                    <pre>
+Budget,Year,Month,Month1,Month2,Month3,Month4,Month5,Month6,Month7,Month8,Month9,Month10,Month11,Month12
+Test1,2001,January<span class="error">,,</span>200,300,400,500,600,700,800,900,1000,1100,1200        </pre>
                 </td>
             </tr>
         </tbody>
