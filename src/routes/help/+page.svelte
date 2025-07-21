@@ -3,7 +3,7 @@
         Help Documentation
     </p>
     <ul class="help-list">
-        <li>Click <strong class="highlight-text">Download CSV Template</strong> to get a CSV file with the correct format.
+        <li>Click <strong class="highlight-text">Download CSV Template</strong> to get a CSV Template file with the correct format.
         <img src="./template.png"/></li>
         <li>
             <pre class="code-block">
@@ -18,6 +18,23 @@ Test1,2025,March,100,200,300,400,500,600,700,800,900,1000,1100,1200
         <li><strong class="highlight-text">Month1</strong> - The budget amount for the start Month e.g. January = 100</li>
         <li><strong class="highlight-text">Month2</strong> - Start Month plus 1 e.g. February</li>
         <li>Must contain all 12 Months and values</li>
+    </ul>
+    
+    <p class="section-title">
+        Validation Rules
+    </p>
+    <p>
+        The application applies the following validation rules to each row in the CSV file:
+    </p>
+    <ul class="help-list">
+        <li><strong>CSV is not empty:</strong> The CSV file must contain at least one row of data.</li>
+        <li><strong>Headers are valid:</strong> The CSV file must contain the expected headers.</li>
+        <li><strong>Budget name is not empty:</strong> Each row must have a non-empty <code>Budget</code> name.</li>
+        <li><strong>Budget is valid:</strong> Each <code>Budget</code> name must match one of the budget names in the system.</li>
+        <li><strong>Year is present and valid:</strong> Each row must have a <code>Year</code> value between 2000 and 2100 inclusive.</li>
+        <li><strong>Month is valid:</strong> Each row must have a valid <code>Month</code> value (one of the 12 month names).</li>
+        <li><strong>No duplicate Budget-Year-Month combinations:</strong> Each combination of <code>Budget</code>, <code>Year</code>, and <code>Month</code> must be unique.</li>
+        <li><strong>Amounts are valid:</strong> Each <code>Month1</code> to <code>Month12</code> value must be a non-negative number.</li>
     </ul>
 
     <hr class="separator">

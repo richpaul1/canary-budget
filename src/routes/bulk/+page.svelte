@@ -324,12 +324,13 @@
 							<th scope="col" class="px-4 py-2 text-gray-200">Year</th>
 							<th scope="col" class="px-4 py-2 text-gray-200">Start Month</th>
 							{#each amountHeaders as _, index}
-								<th scope="col" class="px-4 py-2 text-gray-200">Month {index + 1}</th>
+								<th scope="col" class="px-4 py-2 text-gray-200"></th>
+								<th scope="col" class="px-4 py-2 text-gray-200"></th>
 							{/each}
 							<th scope="col" class="px-4 py-2 text-gray-200">Total</th>
 						</tr>
 					</thead>
-					<tbody>
+					<tbody class="text-sm">
 						{#each csvData as row, index}
 							<tr>
 								<td
@@ -357,7 +358,10 @@
 								<td class="border border-gray-300 px-4 py-2 text-gray-300">{row.Month}</td>
 								{#each amountHeaders as month, monthIndex}
 									<td class="border border-gray-300 px-4 py-2 text-gray-300">
-										{getShortMonthNames(row)[monthIndex]} - ${parseFloat(
+										{getShortMonthNames(row)[monthIndex]}
+									</td>
+									<td class="border border-gray-300 px-4 py-2 text-gray-300">
+										${parseFloat(
 											row[month].toString().replace(/,/g, '')
 										).toLocaleString()}
 									</td>
